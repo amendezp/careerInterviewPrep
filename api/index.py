@@ -9,7 +9,16 @@ from flask import Flask, jsonify, request
 load_dotenv()
 
 app = Flask(__name__)
-client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+_client = None
+
+def get_client():
+    global _client
+    if _client is None:
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
+        _client = Anthropic(api_key=api_key)
+    return _client
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -154,7 +163,7 @@ For scenario:
 }}"""
 
     try:
-        response = client.messages.create(
+        response = get_client().messages.create(
             model="claude-sonnet-4-5-20250514",
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
@@ -231,7 +240,7 @@ Evaluate how well the user's answer covers the key concepts. Be encouraging but 
 }}"""
 
     try:
-        response = client.messages.create(
+        response = get_client().messages.create(
             model="claude-sonnet-4-5-20250514",
             max_tokens=1024,
             messages=[{"role": "user", "content": eval_prompt}],
