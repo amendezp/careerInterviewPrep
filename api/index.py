@@ -164,7 +164,7 @@ For scenario:
 
     try:
         response = get_client().messages.create(
-            model="claude-sonnet-4-5-latest",
+            model="claude-sonnet-4-5-20250929",
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -241,7 +241,7 @@ Evaluate how well the user's answer covers the key concepts. Be encouraging but 
 
     try:
         response = get_client().messages.create(
-            model="claude-sonnet-4-5-latest",
+            model="claude-sonnet-4-5-20250929",
             max_tokens=1024,
             messages=[{"role": "user", "content": eval_prompt}],
         )
