@@ -1,0 +1,68 @@
+[
+  {
+    "id": "rag",
+    "name": "RAG",
+    "section_start": "## 1. RAG (Retrieval Augmented Generation)",
+    "section_end": "## 2. Fine-Tuning"
+  },
+  {
+    "id": "fine_tuning",
+    "name": "Fine-Tuning",
+    "section_start": "## 2. Fine-Tuning",
+    "section_end": "## 3. LoRA (Low-Rank Adaptation)"
+  },
+  {
+    "id": "lora",
+    "name": "LoRA",
+    "section_start": "## 3. LoRA (Low-Rank Adaptation)",
+    "section_end": "## 4. Prompt Engineering & Temperature"
+  },
+  {
+    "id": "prompt_engineering",
+    "name": "Prompt Engineering & Temperature",
+    "section_start": "## 4. Prompt Engineering & Temperature",
+    "section_end": "## 5. Evals (LLM Evaluation)"
+  },
+  {
+    "id": "evals",
+    "name": "Evals",
+    "section_start": "## 5. Evals (LLM Evaluation)",
+    "section_end": "## 6. Chain of Thought (CoT)"
+  },
+  {
+    "id": "cot",
+    "name": "Chain of Thought (CoT)",
+    "section_start": "## 6. Chain of Thought (CoT)",
+    "section_end": "## 7. Agents & Agentic Patterns"
+  },
+  {
+    "id": "agents",
+    "name": "Agents & Agentic Patterns",
+    "section_start": "## 7. Agents & Agentic Patterns",
+    "section_end": "## 8. Memory Management"
+  },
+  {
+    "id": "memory",
+    "name": "Memory Management",
+    "section_start": "## 8. Memory Management",
+    "section_end": "## 9. Embeddings & Vector Search"
+  },
+  {
+    "id": "embeddings",
+    "name": "Embeddings & Vector Search",
+    "section_start": "## 9. Embeddings & Vector Search",
+    "section_end": "## 10. Guardrails & Safety"
+  },
+  {
+    "id": "guardrails",
+    "name": "Guardrails & Safety",
+    "section_start": "## 10. Guardrails & Safety",
+    "section_end": "## 11. Decision Framework"
+  },
+  {
+    "id": "decision_framework",
+    "name": "Decision Framework",
+    "section_start": "## 11. Decision Framework: RAG vs Fine-Tuning vs Prompt Engineering",
+    "section_end": "## 12. Interview Cheat Sheet"
+  }
+]
