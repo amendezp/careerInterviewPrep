@@ -85,12 +85,19 @@ def generate_question():
     fmt = data.get("format", "random")
     difficulty = data.get("difficulty", "intermediate")
     history = data.get("history", [])
+    topic_counts = data.get("topic_counts", {})
 
     guide = load_study_guide()
     topics_list = load_topics()
 
     if topic == "all":
-        chosen = random.choice(topics_list)
+        if topic_counts:
+            # Weight selection toward least-attempted topics for balanced coverage
+            max_count = max(topic_counts.values(), default=0) + 1
+            weights = [max_count - topic_counts.get(t["id"], 0) for t in topics_list]
+            chosen = random.choices(topics_list, weights=weights, k=1)[0]
+        else:
+            chosen = random.choice(topics_list)
         topic = chosen["id"]
 
     context = extract_section(guide, topic)
@@ -124,6 +131,8 @@ INSTRUCTIONS:
 - {fmt_instruction}
 - Difficulty: {difficulty} — {difficulty_instruction}
 - Questions should test understanding "one level deeper than textbook" — the kind of depth a senior practitioner would expect.
+- You should supplement the study material with your OWN broader knowledge of the topic — include real-world patterns, production war stories, recent developments, and cross-cutting concepts that a senior practitioner would know.
+- Do NOT limit yourself to rephrasing the study material. Use it as a foundation but generate questions that test deeper, more varied understanding.
 - For multiple choice: wrong answers should be plausible misconceptions, not jokes.
 - For open-ended: the answer should require explaining WHY, not just WHAT.
 - For scenarios: present a realistic situation where the candidate must recommend an approach and justify it.

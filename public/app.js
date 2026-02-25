@@ -56,6 +56,15 @@ const recommendationsList = document.getElementById("recommendations-list");
 const deepAnalysisBtn = document.getElementById("deep-analysis-btn");
 const deepAnalysisResult = document.getElementById("deep-analysis-result");
 const evalLoading = document.getElementById("eval-loading");
+const voiceControls = document.getElementById("voice-controls");
+const micBtn = document.getElementById("mic-btn");
+const micStatus = document.getElementById("mic-status");
+
+// Speech recognition
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const speechSupported = !!SpeechRecognition;
+let recognition = null;
+let isRecording = false;
 
 // Progress persistence
 function getProgress() {
@@ -102,11 +111,13 @@ async function fetchTopics() {
   return res.json();
 }
 
-async function fetchQuestion(topic, format, difficulty, history) {
+async function fetchQuestion(topic, format, difficulty, history, topic_counts) {
+  const body = { topic, format, difficulty, history };
+  if (topic_counts) body.topic_counts = topic_counts;
   const res = await fetch("/api/question", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ topic, format, difficulty, history }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error("Failed to generate question");
   return res.json();
@@ -164,6 +175,8 @@ function renderQuestion(q) {
   if (q.type === "multiple_choice") {
     mcOptions.classList.remove("hidden");
     textAnswer.classList.add("hidden");
+    voiceControls.classList.add("hidden");
+    stopRecording();
 
     document.querySelectorAll(".mc-btn").forEach((btn) => {
       const opt = btn.dataset.option;
@@ -175,6 +188,16 @@ function renderQuestion(q) {
     mcOptions.classList.add("hidden");
     textAnswer.classList.remove("hidden");
     answerInput.value = "";
+
+    // Show voice controls if browser supports speech recognition
+    if (speechSupported) {
+      voiceControls.classList.remove("hidden");
+      micStatus.textContent = "Tap to speak";
+    } else {
+      voiceControls.classList.add("hidden");
+    }
+    // Stop any active recording from previous question
+    stopRecording();
   }
 
   submitBtn.classList.remove("hidden");
@@ -404,7 +427,16 @@ newQuestionBtn.addEventListener("click", async () => {
 
   try {
     const history = getHistory();
-    const q = await fetchQuestion(currentTopic, format, difficulty, history);
+    // Build topic_counts for balanced "All Topics" selection
+    let topicCounts = null;
+    if (currentTopic === "all") {
+      const progress = getProgress();
+      topicCounts = {};
+      topics.forEach((t) => {
+        topicCounts[t.id] = (progress[t.id] && progress[t.id].attempted) || 0;
+      });
+    }
+    const q = await fetchQuestion(currentTopic, format, difficulty, history, topicCounts);
     if (q.error) throw new Error(q.error);
     renderQuestion(q);
   } catch (err) {
@@ -437,6 +469,9 @@ submitBtn.addEventListener("click", async () => {
     answer = answerInput.value.trim();
     if (!answer) return;
   }
+
+  // Stop any active recording
+  stopRecording();
 
   submitBtn.disabled = true;
   submitBtn.classList.add("hidden");
@@ -525,6 +560,68 @@ deepAnalysisBtn.addEventListener("click", async () => {
   } finally {
     deepAnalysisBtn.disabled = false;
     deepAnalysisBtn.textContent = "Get Study Advice from Claude";
+  }
+});
+
+// Voice recording
+function stopRecording() {
+  if (recognition) {
+    isRecording = false;
+    recognition.abort();
+    recognition = null;
+  }
+  micBtn.classList.remove("recording");
+  micStatus.textContent = speechSupported ? "Tap to speak" : "";
+}
+
+function startRecording() {
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = "en-US";
+
+  let finalTranscript = answerInput.value;
+
+  recognition.onresult = (event) => {
+    let interim = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += (finalTranscript ? " " : "") + transcript;
+      } else {
+        interim += transcript;
+      }
+    }
+    answerInput.value = finalTranscript + (interim ? " " + interim : "");
+  };
+
+  recognition.onend = () => {
+    // Auto-restart if still in recording mode (browser may pause)
+    if (isRecording) {
+      finalTranscript = answerInput.value;
+      recognition.start();
+    }
+  };
+
+  recognition.onerror = (event) => {
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      micStatus.textContent = "Mic access denied";
+      stopRecording();
+    }
+    // "no-speech" and "aborted" are handled by onend auto-restart
+  };
+
+  recognition.start();
+  isRecording = true;
+  micBtn.classList.add("recording");
+  micStatus.textContent = "Listening...";
+}
+
+micBtn.addEventListener("click", () => {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
   }
 });
 
