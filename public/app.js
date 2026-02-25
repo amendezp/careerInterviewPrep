@@ -55,6 +55,7 @@ const recommendationsSubtitle = document.getElementById("recommendations-subtitl
 const recommendationsList = document.getElementById("recommendations-list");
 const deepAnalysisBtn = document.getElementById("deep-analysis-btn");
 const deepAnalysisResult = document.getElementById("deep-analysis-result");
+const evalLoading = document.getElementById("eval-loading");
 
 // Progress persistence
 function getProgress() {
@@ -404,7 +405,8 @@ submitBtn.addEventListener("click", async () => {
   }
 
   submitBtn.disabled = true;
-  submitBtn.textContent = "Evaluating...";
+  submitBtn.classList.add("hidden");
+  evalLoading.classList.remove("hidden");
 
   // Disable MC buttons
   if (currentQuestion.type === "multiple_choice") {
@@ -415,6 +417,7 @@ submitBtn.addEventListener("click", async () => {
 
   try {
     const result = await evaluateAnswer(currentQuestion, answer);
+    evalLoading.classList.add("hidden");
     if (result.error) throw new Error(result.error);
 
     // Highlight MC answers
@@ -436,6 +439,8 @@ submitBtn.addEventListener("click", async () => {
 
     renderFeedback(result);
   } catch (err) {
+    evalLoading.classList.add("hidden");
+    submitBtn.classList.remove("hidden");
     submitBtn.textContent = "Error - Try Again";
     submitBtn.disabled = false;
   }
