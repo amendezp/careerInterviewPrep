@@ -327,10 +327,60 @@ textarea:focus {
   color: #8b949e;
 }
 
-#feedback-text {
-  color: #c9d1d9;
-  line-height: 1.7;
+#feedback-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
   margin-bottom: 1.25rem;
+}
+
+.feedback-col {
+  background: #0d1117;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+#feedback-strengths {
+  border: 1px solid #238636;
+}
+
+#feedback-gaps {
+  border: 1px solid #f85149;
+}
+
+.feedback-col-icon {
+  font-size: 1.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.feedback-col h4 {
+  color: #8b949e;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.6rem;
+}
+
+#feedback-strengths h4 { color: #56d364; }
+#feedback-gaps h4 { color: #f85149; }
+
+.feedback-col ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.feedback-col li {
+  font-size: 0.85rem;
+  color: #c9d1d9;
+  line-height: 1.5;
+}
+
+.feedback-col li.empty-feedback {
+  color: #484f58;
+  font-style: italic;
 }
 
 #feedback-explanation, #feedback-tip {
@@ -630,6 +680,10 @@ textarea:focus {
   }
 
   #progress-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #feedback-columns {
     grid-template-columns: 1fr;
   }
 

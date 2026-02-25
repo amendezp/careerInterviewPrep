@@ -201,7 +201,41 @@ function renderFeedback(result) {
   }
 
   feedbackScore.textContent = `Score: ${Math.round(score * 100)}%`;
-  feedbackText.textContent = result.feedback;
+
+  // Populate strengths column
+  const strengthsList = document.getElementById("strengths-list");
+  strengthsList.innerHTML = "";
+  const strengths = result.strengths || [];
+  if (strengths.length > 0) {
+    strengths.forEach((s) => {
+      const li = document.createElement("li");
+      li.textContent = s;
+      strengthsList.appendChild(li);
+    });
+  } else {
+    const li = document.createElement("li");
+    li.className = "empty-feedback";
+    li.textContent = "Nothing matched this time";
+    strengthsList.appendChild(li);
+  }
+
+  // Populate gaps column
+  const gapsList = document.getElementById("gaps-list");
+  gapsList.innerHTML = "";
+  const gaps = result.gaps || [];
+  if (gaps.length > 0) {
+    gaps.forEach((g) => {
+      const li = document.createElement("li");
+      li.textContent = g;
+      gapsList.appendChild(li);
+    });
+  } else {
+    const li = document.createElement("li");
+    li.className = "empty-feedback";
+    li.textContent = "Nothing missing — great job!";
+    gapsList.appendChild(li);
+  }
+
   explanationText.textContent = result.explanation;
   tipText.textContent = result.tip;
 

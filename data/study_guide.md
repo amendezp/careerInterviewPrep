@@ -1,7 +1,7 @@
 # LLM & GenAI Technical Study Guide
-### For Eli's Technical Screening at Stanford — Friday, Feb 27, 2026
+### For Technical Screening at Stanford — Friday, Feb 27, 2026
 
-> **How to use this guide:** Each concept follows the same structure — what it *actually* is, how it works under the hood, when to use it, when NOT to use it, key pitfalls, and a practical opinion. This mirrors the depth Andy said Eli expects: "one level deeper than textbook."
+> **How to use this guide:** Each concept follows the same structure — what it *actually* is, how it works under the hood, when to use it, when NOT to use it, key pitfalls, and a practical opinion. This mirrors the depth the interviewer expects: "one level deeper than textbook."
 
 ---
 
@@ -1005,7 +1005,7 @@ Analysis shows ~73% of companies using AI are spending money on approaches they 
 
 ### One-liners that demonstrate depth
 
-Use these when Eli asks about a concept — they show you understand it practically, not just theoretically.
+Use these when the interviewer asks about a concept — they show you understand it practically, not just theoretically.
 
 | Topic | Say this |
 |-------|---------|
@@ -1020,9 +1020,9 @@ Use these when Eli asks about a concept — they show you understand it practica
 | **Embeddings** | "Embeddings capture semantic meaning as dense vectors. Cosine similarity on normalized vectors is the standard, and hybrid search (dense + sparse) is becoming the default." |
 | **Guardrails** | "No single guardrail is sufficient — adaptive attacks broke all eight methods in a recent study. You need defense-in-depth and regular red-teaming." |
 
-### When Eli asks something you don't know
+### When the interviewer asks something you don't know
 
-Andy's explicit advice: **Say "I don't know."** Both Eli and the team value intellectual honesty. They've been turned off by candidates who tried to bluff through answers.
+**Say "I don't know."** The interviewer and the team value intellectual honesty. They've been turned off by candidates who tried to bluff through answers.
 
 **Template**: "I haven't worked with that directly, but here's my understanding of the general concept / here's how I'd approach learning it..."
 

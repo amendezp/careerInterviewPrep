@@ -119,6 +119,7 @@ INSTRUCTIONS:
 - For multiple choice: wrong answers should be plausible misconceptions, not jokes.
 - For open-ended: the answer should require explaining WHY, not just WHAT.
 - For scenarios: present a realistic situation where the candidate must recommend an approach and justify it.
+- NEVER use the name "Eli" in any question or answer. If referencing an interviewer, say "the interviewer".
 {history_text}
 
 Respond with ONLY valid JSON in this exact format:
@@ -206,11 +207,14 @@ CORRECT ANSWER: {question_data.get('correct_answer', '')}
 
 USER'S ANSWER: {user_answer}
 
+IMPORTANT: Never use the name "Eli" — refer to "the interviewer" instead.
+
 Evaluate the user's answer. Respond with ONLY valid JSON:
 {{
   "correct": true/false,
   "score": 1.0 or 0.0,
-  "feedback": "Specific feedback — if wrong, explain why their choice was wrong and why the correct answer is right. Reference the study material.",
+  "strengths": ["What the user got right (1-2 bullet points, or empty array if completely wrong)"],
+  "gaps": ["What was wrong or missing (1-2 bullet points, or empty array if perfect)"],
   "explanation": "Full explanation of the correct answer with context from the study material",
   "tip": "A practical study tip or interview insight related to this question"
 }}"""
@@ -230,11 +234,14 @@ SAMPLE STRONG ANSWER:
 
 USER'S ANSWER: {user_answer}
 
+IMPORTANT: Never use the name "Eli" — refer to "the interviewer" instead.
+
 Evaluate how well the user's answer covers the key concepts. Be encouraging but honest. Respond with ONLY valid JSON:
 {{
   "correct": true/false (true if they demonstrate solid understanding, even if not perfect),
   "score": 0.0-1.0 (0.0 = completely wrong, 0.5 = partial understanding, 1.0 = excellent),
-  "feedback": "Specific feedback on what they got right and what they missed. Be concrete — reference specific concepts from the study material.",
+  "strengths": ["Specific things the user got right (1-3 bullet points). Reference concepts from the study material. Empty array if completely wrong."],
+  "gaps": ["Specific things the user missed or got wrong (1-3 bullet points). Reference concepts from the study material. Empty array if perfect."],
   "explanation": "The complete correct answer with full context from the study material",
   "tip": "A practical study tip or interview insight related to this question"
 }}"""

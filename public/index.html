@@ -76,7 +76,18 @@
         <span id="feedback-label"></span>
         <span id="feedback-score"></span>
       </div>
-      <div id="feedback-text"></div>
+      <div id="feedback-columns">
+        <div id="feedback-strengths" class="feedback-col">
+          <div class="feedback-col-icon">&#10003;</div>
+          <h4>What You Got Right</h4>
+          <ul id="strengths-list"></ul>
+        </div>
+        <div id="feedback-gaps" class="feedback-col">
+          <div class="feedback-col-icon">&#10060;</div>
+          <h4>What Was Missing</h4>
+          <ul id="gaps-list"></ul>
+        </div>
+      </div>
       <div id="feedback-explanation">
         <h4>Full Explanation</h4>
         <p id="explanation-text"></p>
