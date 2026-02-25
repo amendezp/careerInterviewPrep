@@ -87,7 +87,13 @@ def generate_question():
     history = data.get("history", [])
 
     guide = load_study_guide()
-    context = extract_section(guide, topic) if topic != "all" else guide
+    topics_list = load_topics()
+
+    if topic == "all":
+        chosen = random.choice(topics_list)
+        topic = chosen["id"]
+
+    context = extract_section(guide, topic)
 
     if fmt == "random":
         fmt = random.choice(["multiple_choice", "open_ended", "scenario"])
