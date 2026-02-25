@@ -1,3 +1,20 @@
+// Topic importance weights for recommendation scoring
+const TOPIC_IMPORTANCE = {
+  rag: 1.0,
+  fine_tuning: 1.0,
+  prompt_engineering: 1.0,
+  decision_framework: 1.0,
+  agents: 1.0,
+  evals: 0.6,
+  embeddings: 0.6,
+  cot: 0.6,
+  memory: 0.6,
+  lora: 0.3,
+  guardrails: 0.3,
+};
+
+const RECOMMENDATION_THRESHOLD = 10;
+
 // State
 const STATE_KEY = "quiz_progress";
 
@@ -33,6 +50,11 @@ const progressGrid = document.getElementById("progress-grid");
 const progressSummary = document.getElementById("progress-summary");
 const resetBtn = document.getElementById("reset-btn");
 const emptyState = document.getElementById("empty-state");
+const recommendationsSection = document.getElementById("recommendations");
+const recommendationsSubtitle = document.getElementById("recommendations-subtitle");
+const recommendationsList = document.getElementById("recommendations-list");
+const deepAnalysisBtn = document.getElementById("deep-analysis-btn");
+const deepAnalysisResult = document.getElementById("deep-analysis-result");
 
 // Progress persistence
 function getProgress() {
@@ -188,6 +210,108 @@ function renderFeedback(result) {
   submitBtn.classList.add("hidden");
 }
 
+function computeRecommendations() {
+  const progress = getProgress();
+
+  // Count total answers across all topics
+  let totalAnswers = 0;
+  for (const data of Object.values(progress)) {
+    totalAnswers += data.attempted || 0;
+  }
+
+  if (totalAnswers < RECOMMENDATION_THRESHOLD) return null;
+
+  // Score each topic
+  const scored = topics.map((t) => {
+    const data = progress[t.id] || { attempted: 0, totalScore: 0 };
+    const importance = TOPIC_IMPORTANCE[t.id] || 0.5;
+
+    let gapPenalty, weaknessPenalty;
+
+    if (data.attempted === 0) {
+      // Never attempted — high gap, assume weakness
+      gapPenalty = 1.0;
+      weaknessPenalty = 0.8;
+    } else {
+      gapPenalty = 0.0;
+      const avgScore = data.totalScore / data.attempted;
+      weaknessPenalty = 1 - avgScore;
+
+      // Boost undertested topics (fewer than 3 questions)
+      if (data.attempted < 3) {
+        gapPenalty = 0.4;
+      }
+    }
+
+    const priorityScore =
+      gapPenalty * 0.3 + weaknessPenalty * 0.5 + importance * 0.2;
+
+    // Build reason string
+    let reason;
+    if (data.attempted === 0) {
+      reason = "Not attempted yet";
+    } else if (data.attempted < 3) {
+      const pct = Math.round((data.totalScore / data.attempted) * 100);
+      reason = `Only ${data.attempted} question${data.attempted > 1 ? "s" : ""} answered (${pct}% avg)`;
+    } else {
+      const pct = Math.round((data.totalScore / data.attempted) * 100);
+      reason = `${data.attempted} questions, ${pct}% avg score`;
+    }
+
+    return {
+      topicId: t.id,
+      topicName: t.name,
+      priorityScore,
+      reason,
+      attempted: data.attempted,
+      avgScore: data.attempted > 0 ? data.totalScore / data.attempted : 0,
+    };
+  });
+
+  // Sort by priority descending, return top 3
+  scored.sort((a, b) => b.priorityScore - a.priorityScore);
+  return { recommendations: scored.slice(0, 3), totalAnswers };
+}
+
+function renderRecommendations() {
+  const result = computeRecommendations();
+
+  if (!result) {
+    recommendationsSection.classList.add("hidden");
+    return;
+  }
+
+  const { recommendations, totalAnswers } = result;
+  recommendationsSection.classList.remove("hidden");
+  recommendationsSubtitle.textContent = `Based on ${totalAnswers} answers — here's where to focus next`;
+
+  recommendationsList.innerHTML = "";
+  recommendations.forEach((rec, i) => {
+    const rank = i + 1;
+    const rankClass = `rank-${rank}`;
+    const scorePct = Math.round(rec.priorityScore * 100);
+
+    const card = document.createElement("div");
+    card.className = "rec-card";
+    card.innerHTML = `
+      <div class="rec-card-header">
+        <span class="rec-rank ${rankClass}">#${rank}</span>
+        <span class="rec-topic-name">${rec.topicName}</span>
+      </div>
+      <div class="rec-reason">${rec.reason}</div>
+      <div class="rec-score-bar">
+        <div class="rec-score-bar-fill" style="width: ${scorePct}%"></div>
+      </div>
+      <button class="rec-practice-btn" data-topic="${rec.topicId}">Practice This Topic</button>
+    `;
+    recommendationsList.appendChild(card);
+  });
+
+  // Reset deep analysis when recommendations update
+  deepAnalysisResult.classList.add("hidden");
+  deepAnalysisResult.textContent = "";
+}
+
 function renderProgress() {
   const progress = getProgress();
   progressGrid.innerHTML = "";
@@ -224,6 +348,8 @@ function renderProgress() {
   } else {
     progressSummary.textContent = "No questions answered yet.";
   }
+
+  renderRecommendations();
 }
 
 // Event handlers
@@ -324,6 +450,42 @@ resetBtn.addEventListener("click", () => {
     localStorage.removeItem(STATE_KEY);
     localStorage.removeItem("quiz_history");
     renderProgress();
+  }
+});
+
+// Practice This Topic buttons (delegated)
+recommendationsList.addEventListener("click", (e) => {
+  const btn = e.target.closest(".rec-practice-btn");
+  if (!btn) return;
+  const topicId = btn.dataset.topic;
+  setActiveTopic(topicId);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  newQuestionBtn.click();
+});
+
+// Get Study Advice from Claude
+deepAnalysisBtn.addEventListener("click", async () => {
+  const progress = getProgress();
+  deepAnalysisBtn.disabled = true;
+  deepAnalysisBtn.textContent = "Getting advice...";
+
+  try {
+    const res = await fetch("/api/recommendations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ progress }),
+    });
+    if (!res.ok) throw new Error("Failed to get recommendations");
+    const data = await res.json();
+
+    deepAnalysisResult.textContent = data.advice;
+    deepAnalysisResult.classList.remove("hidden");
+  } catch (err) {
+    deepAnalysisResult.textContent = "Error: " + err.message;
+    deepAnalysisResult.classList.remove("hidden");
+  } finally {
+    deepAnalysisBtn.disabled = false;
+    deepAnalysisBtn.textContent = "Get Study Advice from Claude";
   }
 });
 

@@ -254,3 +254,56 @@ Evaluate how well the user's answer covers the key concepts. Be encouraging but 
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/recommendations", methods=["POST"])
+def get_recommendations():
+    data = request.get_json()
+    progress = data.get("progress", {})
+
+    if not progress:
+        return jsonify({"error": "No progress data provided"}), 400
+
+    topics_list = load_topics()
+    topic_map = {t["id"]: t["name"] for t in topics_list}
+
+    summary_lines = []
+    for tid, name in topic_map.items():
+        p = progress.get(tid)
+        if p and p.get("attempted", 0) > 0:
+            avg = round(p["totalScore"] / p["attempted"] * 100)
+            summary_lines.append(f"- {name}: {p['attempted']} questions, {avg}% avg score")
+        else:
+            summary_lines.append(f"- {name}: not attempted")
+
+    progress_summary = "\n".join(summary_lines)
+
+    guide = load_study_guide()
+
+    prompt = f"""You are a study coach helping someone prepare for a Stanford technical screening on LLM/GenAI topics.
+
+STUDY MATERIAL:
+{guide[:3000]}
+
+STUDENT'S PROGRESS:
+{progress_summary}
+
+Based on their progress, give specific, actionable study advice in 4-6 sentences. Focus on:
+1. Their weakest areas and what concepts to review
+2. Topics they haven't attempted yet that are important
+3. Concrete study strategies (not generic advice)
+
+Be direct and specific. Reference actual concepts from the study material."""
+
+    try:
+        response = get_client().messages.create(
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=512,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        advice = response.content[0].text
+        return jsonify({"advice": advice})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
