@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import re
 
 from anthropic import Anthropic
@@ -89,8 +90,9 @@ def generate_question():
     context = extract_section(guide, topic) if topic != "all" else guide
 
     if fmt == "random":
-        fmt_instruction = "Randomly choose one of: multiple_choice, open_ended, or scenario. Vary the type."
-    elif fmt == "multiple_choice":
+        fmt = random.choice(["multiple_choice", "open_ended", "scenario"])
+
+    if fmt == "multiple_choice":
         fmt_instruction = "Generate a multiple_choice question with exactly 4 options (A, B, C, D). Wrong answers should represent real misconceptions, not obviously silly options."
     elif fmt == "open_ended":
         fmt_instruction = "Generate an open_ended question that requires a 2-4 sentence explanation of concepts or trade-offs."
