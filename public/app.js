@@ -56,6 +56,14 @@ const recommendationsList = document.getElementById("recommendations-list");
 const deepAnalysisBtn = document.getElementById("deep-analysis-btn");
 const deepAnalysisResult = document.getElementById("deep-analysis-result");
 const evalLoading = document.getElementById("eval-loading");
+const feedbackArchitecture = document.getElementById("feedback-architecture");
+const architectureDiagram = document.getElementById("architecture-diagram");
+const feedbackReasoning = document.getElementById("feedback-reasoning");
+const reasoningList = document.getElementById("reasoning-list");
+const feedbackImplications = document.getElementById("feedback-implications");
+const designDocList = document.getElementById("design-doc-list");
+const scalingList = document.getElementById("scaling-list");
+const opsList = document.getElementById("ops-list");
 const voiceControls = document.getElementById("voice-controls");
 const micBtn = document.getElementById("mic-btn");
 const micStatus = document.getElementById("mic-status");
@@ -189,6 +197,15 @@ function renderQuestion(q) {
     textAnswer.classList.remove("hidden");
     answerInput.value = "";
 
+    // Concept check: fewer rows, different placeholder
+    if (q.type === "concept_check") {
+      answerInput.rows = 2;
+      answerInput.placeholder = "Quick answer...";
+    } else {
+      answerInput.rows = 5;
+      answerInput.placeholder = "Type your answer here...";
+    }
+
     // Show voice controls if browser supports speech recognition
     if (speechSupported) {
       voiceControls.classList.remove("hidden");
@@ -224,6 +241,27 @@ function renderFeedback(result) {
   }
 
   feedbackScore.textContent = `Score: ${Math.round(score * 100)}%`;
+
+  // Concept check: simplified feedback
+  if (currentQuestion && currentQuestion.type === "concept_check") {
+    document.getElementById("feedback-columns").classList.add("hidden");
+    document.getElementById("feedback-tip").classList.add("hidden");
+    feedbackArchitecture.classList.add("hidden");
+    feedbackReasoning.classList.add("hidden");
+    feedbackImplications.classList.add("hidden");
+
+    explanationText.textContent = result.explanation;
+    document.getElementById("feedback-explanation").classList.remove("hidden");
+
+    showSection("feedback-area");
+    questionArea.classList.remove("hidden");
+    submitBtn.classList.add("hidden");
+    return;
+  }
+
+  // Non-concept-check: ensure columns and tip are visible
+  document.getElementById("feedback-columns").classList.remove("hidden");
+  document.getElementById("feedback-tip").classList.remove("hidden");
 
   // Populate strengths column
   const strengthsList = document.getElementById("strengths-list");
@@ -261,6 +299,50 @@ function renderFeedback(result) {
 
   explanationText.textContent = result.explanation;
   tipText.textContent = result.tip;
+
+  // Scenario-specific sections
+  if (currentQuestion && currentQuestion.type === "scenario") {
+    if (result.architecture_diagram) {
+      architectureDiagram.textContent = result.architecture_diagram;
+      feedbackArchitecture.classList.remove("hidden");
+    } else {
+      feedbackArchitecture.classList.add("hidden");
+    }
+
+    if (result.reasoning_walkthrough && result.reasoning_walkthrough.length > 0) {
+      reasoningList.innerHTML = "";
+      result.reasoning_walkthrough.forEach((step) => {
+        const li = document.createElement("li");
+        li.textContent = step;
+        reasoningList.appendChild(li);
+      });
+      feedbackReasoning.classList.remove("hidden");
+    } else {
+      feedbackReasoning.classList.add("hidden");
+    }
+
+    if (result.architectural_implications) {
+      const impl = result.architectural_implications;
+      const populate = (ul, items) => {
+        ul.innerHTML = "";
+        (items || []).forEach((item) => {
+          const li = document.createElement("li");
+          li.textContent = item;
+          ul.appendChild(li);
+        });
+      };
+      populate(designDocList, impl.design_doc_points);
+      populate(scalingList, impl.scaling_considerations);
+      populate(opsList, impl.operational_concerns);
+      feedbackImplications.classList.remove("hidden");
+    } else {
+      feedbackImplications.classList.add("hidden");
+    }
+  } else {
+    feedbackArchitecture.classList.add("hidden");
+    feedbackReasoning.classList.add("hidden");
+    feedbackImplications.classList.add("hidden");
+  }
 
   showSection("feedback-area");
   // Keep question visible above feedback
@@ -663,3 +745,110 @@ async function init() {
 }
 
 init();
+
+// --- Q&A Section ---
+const qaToggle = document.getElementById("qa-toggle");
+const qaArrow = document.getElementById("qa-arrow");
+const qaBody = document.getElementById("qa-body");
+const qaInput = document.getElementById("qa-input");
+const qaSubmitBtn = document.getElementById("qa-submit-btn");
+const qaLoading = document.getElementById("qa-loading");
+const qaResult = document.getElementById("qa-result");
+const qaAnswer = document.getElementById("qa-answer");
+const qaVerification = document.getElementById("qa-verification");
+const qaSources = document.getElementById("qa-sources");
+const qaSourcesList = document.getElementById("qa-sources-list");
+const qaError = document.getElementById("qa-error");
+
+qaToggle.addEventListener("click", () => {
+  const isHidden = qaBody.classList.toggle("hidden");
+  qaArrow.classList.toggle("expanded", !isHidden);
+});
+
+function renderMarkdown(text) {
+  // Bold: **text** → <strong>text</strong>
+  let html = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  // Bullet lines: lines starting with - or *
+  html = html.replace(/^[\-\*]\s+(.+)$/gm, "<li>$1</li>");
+  // Wrap consecutive <li> in <ul>
+  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, "<ul>$1</ul>");
+  // Paragraphs: double newlines
+  html = html.replace(/\n{2,}/g, "</p><p>");
+  // Single newlines (that aren't inside lists)
+  html = html.replace(/\n/g, "<br>");
+  return "<p>" + html + "</p>";
+}
+
+async function submitQaQuestion() {
+  const question = qaInput.value.trim();
+  if (!question) return;
+
+  qaSubmitBtn.disabled = true;
+  qaResult.classList.add("hidden");
+  qaError.classList.add("hidden");
+  qaLoading.classList.remove("hidden");
+
+  try {
+    const res = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Request failed");
+    }
+
+    qaLoading.classList.add("hidden");
+
+    // Render answer
+    qaAnswer.innerHTML = renderMarkdown(data.answer || "");
+
+    // Render verification badge
+    if (data.verification_note) {
+      qaVerification.textContent = data.verification_note;
+      qaVerification.classList.remove("hidden");
+    } else {
+      qaVerification.classList.add("hidden");
+    }
+
+    // Render sources
+    const sources = data.sources || [];
+    if (sources.length > 0) {
+      qaSourcesList.innerHTML = "";
+      sources.forEach((url) => {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = url;
+        li.appendChild(a);
+        qaSourcesList.appendChild(li);
+      });
+      qaSources.classList.remove("hidden");
+    } else {
+      qaSources.classList.add("hidden");
+    }
+
+    qaResult.classList.remove("hidden");
+  } catch (err) {
+    qaLoading.classList.add("hidden");
+    qaError.textContent = "Error: " + err.message;
+    qaError.classList.remove("hidden");
+  } finally {
+    qaSubmitBtn.disabled = false;
+  }
+}
+
+qaSubmitBtn.addEventListener("click", submitQaQuestion);
+
+// Ctrl/Cmd+Enter to submit from textarea
+qaInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    submitQaQuestion();
+  }
+});

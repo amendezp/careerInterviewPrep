@@ -13,6 +13,31 @@
   </header>
 
   <main>
+    <!-- Q&A Section -->
+    <section id="qa-section">
+      <button id="qa-toggle">Ask a Question <span id="qa-arrow">&#9654;</span></button>
+      <div id="qa-body" class="hidden">
+        <p class="qa-description">Ask any LLM/GenAI question. Your answer will be verified against external sources before being returned.</p>
+        <div id="qa-input-row">
+          <textarea id="qa-input" rows="3" placeholder="e.g. When does it make sense to use RAG over fine-tuning?"></textarea>
+          <button id="qa-submit-btn">Ask</button>
+        </div>
+        <div id="qa-loading" class="hidden">
+          <div class="spinner"></div>
+          <p>Researching and verifying...</p>
+        </div>
+        <div id="qa-result" class="hidden">
+          <div id="qa-answer"></div>
+          <div id="qa-verification" class="hidden"></div>
+          <div id="qa-sources" class="hidden">
+            <h4>Sources</h4>
+            <ul id="qa-sources-list"></ul>
+          </div>
+        </div>
+        <div id="qa-error" class="hidden"></div>
+      </div>
+    </section>
+
     <!-- Controls -->
     <section id="controls">
       <div id="topic-bar">
@@ -24,10 +49,12 @@
           <option value="multiple_choice">Multiple Choice</option>
           <option value="open_ended">Open Ended</option>
           <option value="scenario">Scenario</option>
+          <option value="concept_check">Concept Check</option>
         </select>
         <select id="difficulty-select">
+          <option value="random" selected>Random</option>
           <option value="beginner">Beginner</option>
-          <option value="intermediate" selected>Intermediate</option>
+          <option value="intermediate">Intermediate</option>
           <option value="advanced">Advanced</option>
         </select>
         <button id="new-question-btn">New Question</button>
@@ -100,6 +127,35 @@
         <h4>Study Tip</h4>
         <p id="tip-text"></p>
       </div>
+
+      <div id="feedback-architecture" class="scenario-section hidden">
+        <h4>Architecture Diagram</h4>
+        <pre id="architecture-diagram"></pre>
+      </div>
+
+      <div id="feedback-reasoning" class="scenario-section hidden">
+        <h4>How to Think Through It</h4>
+        <ol id="reasoning-list"></ol>
+      </div>
+
+      <div id="feedback-implications" class="scenario-section hidden">
+        <h4>Architectural Implications</h4>
+        <div id="implications-grid">
+          <div class="implication-col">
+            <h5>Design Doc Points</h5>
+            <ul id="design-doc-list"></ul>
+          </div>
+          <div class="implication-col">
+            <h5>Scaling Considerations</h5>
+            <ul id="scaling-list"></ul>
+          </div>
+          <div class="implication-col">
+            <h5>Operational Concerns</h5>
+            <ul id="ops-list"></ul>
+          </div>
+        </div>
+      </div>
+
       <button id="next-btn">Next Question</button>
     </section>
 

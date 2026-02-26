@@ -3,6 +3,7 @@ import os
 import random
 import re
 
+import requests as http_requests
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
@@ -20,6 +21,12 @@ def get_client():
             raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
         _client = Anthropic(api_key=api_key)
     return _client
+
+def get_perplexity_key():
+    key = os.environ.get("PERPLEXITY_API_KEY")
+    if not key:
+        raise ValueError("PERPLEXITY_API_KEY environment variable is not set")
+    return key
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -84,6 +91,8 @@ def generate_question():
     topic = data.get("topic", "all")
     fmt = data.get("format", "random")
     difficulty = data.get("difficulty", "intermediate")
+    if difficulty == "random":
+        difficulty = random.choice(["beginner", "intermediate", "advanced"])
     history = data.get("history", [])
     topic_counts = data.get("topic_counts", {})
 
@@ -103,12 +112,14 @@ def generate_question():
     context = extract_section(guide, topic)
 
     if fmt == "random":
-        fmt = random.choice(["multiple_choice", "open_ended", "scenario"])
+        fmt = random.choice(["multiple_choice", "open_ended", "scenario", "concept_check"])
 
     if fmt == "multiple_choice":
         fmt_instruction = "Generate a multiple_choice question with exactly 4 options (A, B, C, D). Wrong answers should represent real misconceptions, not obviously silly options."
     elif fmt == "open_ended":
         fmt_instruction = "Generate an open_ended question that requires a 2-4 sentence explanation of concepts or trade-offs."
+    elif fmt == "concept_check":
+        fmt_instruction = "Generate a short concept check question. This should be a quick-fire question that tests whether someone truly understands a concept — a one-sentence definition check, a true/false claim, or a 'what is the key difference between X and Y' question. The answer should be 1-2 sentences max."
     else:
         fmt_instruction = "Generate a scenario question presenting a realistic architectural decision with genuine trade-offs."
 
@@ -178,6 +189,16 @@ For scenario:
   "key_points": ["point 1 a good answer should cover", "point 2", "point 3"],
   "sample_answer": "a strong response covering the key trade-offs",
   "summary": "5-8 word summary of what this question tests"
+}}
+
+For concept_check:
+{{
+  "type": "concept_check",
+  "topic": "{topic}",
+  "difficulty": "{difficulty}",
+  "question": "short focused question",
+  "answer": "1-2 sentence correct answer",
+  "summary": "5-8 word summary"
 }}"""
 
     try:
@@ -209,6 +230,43 @@ def evaluate_answer():
 
     q_type = question_data.get("type", "open_ended")
 
+    if q_type == "concept_check":
+        eval_prompt = f"""You are evaluating a quick concept check answer about LLM/GenAI topics.
+
+STUDY MATERIAL (for reference):
+{context}
+
+QUESTION: {question_data.get('question', '')}
+
+CORRECT ANSWER: {question_data.get('answer', '')}
+
+USER'S ANSWER: {user_answer}
+
+IMPORTANT: Never use the name "Eli" — refer to "the interviewer" instead.
+
+Evaluate whether the user's answer demonstrates understanding of the concept. Respond with ONLY valid JSON:
+{{
+  "correct": true/false,
+  "score": 0.0-1.0,
+  "explanation": "Brief explanation of the correct answer and how the user's answer compares"
+}}"""
+
+        try:
+            response = get_client().messages.create(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=512,
+                messages=[{"role": "user", "content": eval_prompt}],
+            )
+
+            result = parse_json_response(response.content[0].text)
+            if result:
+                return jsonify(result)
+            else:
+                return jsonify({"error": "Failed to parse evaluation response"}), 500
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
     if q_type == "multiple_choice":
         eval_prompt = f"""You are evaluating a quiz answer about LLM/GenAI topics.
 
@@ -234,6 +292,47 @@ Evaluate the user's answer. Respond with ONLY valid JSON:
   "gaps": ["What was wrong or missing (1-2 bullet points, or empty array if perfect)"],
   "explanation": "Full explanation of the correct answer with context from the study material",
   "tip": "A practical study tip or interview insight related to this question"
+}}"""
+    elif q_type == "scenario":
+        eval_prompt = f"""You are evaluating a quiz answer about LLM/GenAI topics.
+
+STUDY MATERIAL (for reference):
+{context}
+
+QUESTION: {question_data.get('question', '')}
+
+KEY POINTS A GOOD ANSWER SHOULD COVER:
+{json.dumps(question_data.get('key_points', []), indent=2)}
+
+SAMPLE STRONG ANSWER:
+{question_data.get('sample_answer', '')}
+
+USER'S ANSWER: {user_answer}
+
+IMPORTANT: Never use the name "Eli" — refer to "the interviewer" instead.
+
+Evaluate how well the user's answer covers the key concepts. Be encouraging but honest.
+
+Additionally, because this is a scenario/architecture question, you MUST also provide:
+1. An ASCII architecture diagram of the optimal solution using +-| for boxes and --> for arrows. Keep it compact (max ~15 lines wide enough to fit in 70 chars). Show the key components and data flow.
+2. A reasoning walkthrough: 3-5 ordered steps showing how a senior engineer would think through this problem in an interview (e.g., "Clarify requirements and constraints", "Identify the key bottleneck", etc.)
+3. Architectural implications broken into three categories: design_doc_points (what you'd put in a design doc), scaling_considerations (how this scales), and operational_concerns (monitoring, failure modes, maintenance).
+
+Respond with ONLY valid JSON:
+{{
+  "correct": true/false (true if they demonstrate solid understanding, even if not perfect),
+  "score": 0.0-1.0 (0.0 = completely wrong, 0.5 = partial understanding, 1.0 = excellent),
+  "strengths": ["Specific things the user got right (1-3 bullet points). Reference concepts from the study material. Empty array if completely wrong."],
+  "gaps": ["Specific things the user missed or got wrong (1-3 bullet points). Reference concepts from the study material. Empty array if perfect."],
+  "explanation": "The complete correct answer with full context from the study material",
+  "tip": "A practical study tip or interview insight related to this question",
+  "architecture_diagram": "ASCII art diagram using +-| for boxes and --> for arrows showing the optimal architecture",
+  "reasoning_walkthrough": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
+  "architectural_implications": {{
+    "design_doc_points": ["Point 1", "Point 2"],
+    "scaling_considerations": ["Consideration 1", "Consideration 2"],
+    "operational_concerns": ["Concern 1", "Concern 2"]
+  }}
 }}"""
     else:
         eval_prompt = f"""You are evaluating a quiz answer about LLM/GenAI topics.
@@ -263,10 +362,12 @@ Evaluate how well the user's answer covers the key concepts. Be encouraging but 
   "tip": "A practical study tip or interview insight related to this question"
 }}"""
 
+    token_limit = 2048 if q_type == "scenario" else 1024
+
     try:
         response = get_client().messages.create(
             model="claude-sonnet-4-5-20250929",
-            max_tokens=1024,
+            max_tokens=token_limit,
             messages=[{"role": "user", "content": eval_prompt}],
         )
 
@@ -275,6 +376,99 @@ Evaluate how well the user's answer covers the key concepts. Be encouraging but 
             return jsonify(result)
         else:
             return jsonify({"error": "Failed to parse evaluation response"}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/ask", methods=["POST"])
+def ask_question():
+    data = request.get_json()
+    question = (data.get("question") or "").strip()
+
+    if not question:
+        return jsonify({"error": "Question cannot be empty"}), 400
+
+    # Step 1: Query Perplexity for a grounded answer
+    try:
+        perplexity_key = get_perplexity_key()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 500
+
+    try:
+        pplx_response = http_requests.post(
+            "https://api.perplexity.ai/chat/completions",
+            headers={
+                "Authorization": f"Bearer {perplexity_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "sonar",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are an expert in LLMs, generative AI, NLP, and machine learning. Provide accurate, detailed answers with citations. Focus on practical, production-level insights.",
+                    },
+                    {"role": "user", "content": question},
+                ],
+            },
+            timeout=30,
+        )
+        pplx_response.raise_for_status()
+    except http_requests.exceptions.Timeout:
+        return jsonify({"error": "External search timed out. Please try again."}), 504
+    except http_requests.exceptions.HTTPError as e:
+        return jsonify({"error": f"External search failed: {e.response.status_code}"}), 502
+    except Exception as e:
+        return jsonify({"error": f"External search error: {str(e)}"}), 502
+
+    pplx_data = pplx_response.json()
+    pplx_answer = pplx_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+    pplx_citations = pplx_data.get("citations", [])
+
+    # Step 2: Reconcile with study guide via Claude
+    guide = load_study_guide()
+
+    reconcile_prompt = f"""You are an expert on LLM/GenAI topics helping a student prepare for a technical interview.
+
+STUDY GUIDE (primary source — trust this material):
+{guide[:4000]}
+
+EXTERNAL REFERENCE (from Perplexity search — use to supplement, not override):
+{pplx_answer}
+
+EXTERNAL CITATIONS:
+{json.dumps(pplx_citations)}
+
+STUDENT'S QUESTION:
+{question}
+
+Instructions:
+- Use the study guide as your primary source of truth.
+- Supplement with the external reference where it adds useful context.
+- If the external reference contradicts the study guide, flag the discrepancy in verification_note.
+- If both sources agree, note that in verification_note.
+- Provide a clear, thorough answer suitable for interview prep.
+
+Respond with ONLY valid JSON:
+{{
+  "answer": "Your comprehensive answer here. Use **bold** for key terms and - for bullet points where appropriate.",
+  "sources": ["list of source URLs from the citations, if any are relevant"],
+  "verification_note": "Brief note on how the answer was verified — e.g. 'Consistent with study guide and external sources' or 'Study guide differs on X point'"
+}}"""
+
+    try:
+        response = get_client().messages.create(
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=1536,
+            messages=[{"role": "user", "content": reconcile_prompt}],
+        )
+
+        result = parse_json_response(response.content[0].text)
+        if result:
+            return jsonify(result)
+        else:
+            return jsonify({"error": "Failed to parse answer"}), 500
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
