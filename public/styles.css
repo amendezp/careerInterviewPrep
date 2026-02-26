@@ -794,7 +794,7 @@ textarea:focus {
   background: #161b22;
   border: 1px solid #30363d;
   border-radius: 8px;
-  margin-bottom: 1.5rem;
+  margin-top: 2rem;
   overflow: hidden;
 }
 

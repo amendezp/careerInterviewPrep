@@ -13,31 +13,6 @@
   </header>
 
   <main>
-    <!-- Q&A Section -->
-    <section id="qa-section">
-      <button id="qa-toggle">Ask a Question <span id="qa-arrow">&#9654;</span></button>
-      <div id="qa-body" class="hidden">
-        <p class="qa-description">Ask any LLM/GenAI question. Your answer will be verified against external sources before being returned.</p>
-        <div id="qa-input-row">
-          <textarea id="qa-input" rows="3" placeholder="e.g. When does it make sense to use RAG over fine-tuning?"></textarea>
-          <button id="qa-submit-btn">Ask</button>
-        </div>
-        <div id="qa-loading" class="hidden">
-          <div class="spinner"></div>
-          <p>Researching and verifying...</p>
-        </div>
-        <div id="qa-result" class="hidden">
-          <div id="qa-answer"></div>
-          <div id="qa-verification" class="hidden"></div>
-          <div id="qa-sources" class="hidden">
-            <h4>Sources</h4>
-            <ul id="qa-sources-list"></ul>
-          </div>
-        </div>
-        <div id="qa-error" class="hidden"></div>
-      </div>
-    </section>
-
     <!-- Controls -->
     <section id="controls">
       <div id="topic-bar">
@@ -180,6 +155,31 @@
     <!-- Empty State -->
     <section id="empty-state">
       <p>Select a topic and click <strong>New Question</strong> to start studying.</p>
+    </section>
+
+    <!-- Q&A Section -->
+    <section id="qa-section">
+      <button id="qa-toggle">Ask a Question <span id="qa-arrow">&#9654;</span></button>
+      <div id="qa-body" class="hidden">
+        <p class="qa-description">Ask any LLM/GenAI question. Your answer will be verified against external sources before being returned.</p>
+        <div id="qa-input-row">
+          <textarea id="qa-input" rows="3" placeholder="e.g. When does it make sense to use RAG over fine-tuning?"></textarea>
+          <button id="qa-submit-btn">Ask</button>
+        </div>
+        <div id="qa-loading" class="hidden">
+          <div class="spinner"></div>
+          <p>Researching and verifying...</p>
+        </div>
+        <div id="qa-result" class="hidden">
+          <div id="qa-answer"></div>
+          <div id="qa-verification" class="hidden"></div>
+          <div id="qa-sources" class="hidden">
+            <h4>Sources</h4>
+            <ul id="qa-sources-list"></ul>
+          </div>
+        </div>
+        <div id="qa-error" class="hidden"></div>
+      </div>
     </section>
   </main>
 
