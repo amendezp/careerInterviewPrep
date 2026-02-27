@@ -111,6 +111,42 @@ def generate_question():
 
     context = extract_section(guide, topic)
 
+    research_context = ""
+    research_enhanced = False
+
+    if random.random() < 0.3:
+        try:
+            perplexity_key = get_perplexity_key()
+            topic_name = next((t["name"] for t in topics_list if t["id"] == topic), topic)
+            pplx_resp = http_requests.post(
+                "https://api.perplexity.ai/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {perplexity_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "sonar",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are an expert in LLMs and generative AI. Provide concise, technical insights.",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"What are the most important recent developments, common interview questions, tricky edge cases, and practical challenges related to {topic_name} in production LLM systems? Focus on what a senior engineer interviewer would ask about.",
+                        },
+                    ],
+                },
+                timeout=15,
+            )
+            pplx_resp.raise_for_status()
+            pplx_data = pplx_resp.json()
+            research_context = pplx_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if research_context:
+                research_enhanced = True
+        except Exception:
+            pass  # Silently fall back to non-enhanced — don't block question generation
+
     if fmt == "random":
         fmt = random.choice(["multiple_choice", "open_ended", "scenario", "concept_check"])
 
@@ -148,7 +184,10 @@ INSTRUCTIONS:
 - For open-ended: the answer should require explaining WHY, not just WHAT.
 - For scenarios: present a realistic situation where the candidate must recommend an approach and justify it.
 - NEVER use the name "Eli" in any question or answer. If referencing an interviewer, say "the interviewer".
-{history_text}
+{f"""
+EXTERNAL RESEARCH (recent developments and common interview angles — use this to generate more thorough, unexpected questions):
+{research_context}
+""" if research_context else ""}{history_text}
 
 Respond with ONLY valid JSON in this exact format:
 
@@ -210,6 +249,7 @@ For concept_check:
 
         result = parse_json_response(response.content[0].text)
         if result:
+            result["research_enhanced"] = research_enhanced
             return jsonify(result)
         else:
             return jsonify({"error": "Failed to parse question response"}), 500

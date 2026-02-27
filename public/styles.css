@@ -139,6 +139,7 @@ select {
 #question-difficulty.beginner { background: #1f3f2a; color: #56d364; }
 #question-difficulty.intermediate { background: #3f3a1f; color: #e3b341; }
 #question-difficulty.advanced { background: #3f1f1f; color: #f85149; }
+#question-research { background: #1f2d3f; color: #79c0ff; }
 
 #question-text {
   font-size: 1.05rem;

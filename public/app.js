@@ -177,6 +177,17 @@ function renderQuestion(q) {
   questionDifficulty.textContent = q.difficulty;
   questionDifficulty.className = "badge " + q.difficulty;
 
+  const existingResearchBadge = document.getElementById("question-research");
+  if (existingResearchBadge) existingResearchBadge.remove();
+
+  if (q.research_enhanced) {
+    const badge = document.createElement("span");
+    badge.id = "question-research";
+    badge.className = "badge research";
+    badge.textContent = "research-enhanced";
+    document.getElementById("question-meta").appendChild(badge);
+  }
+
   questionText.textContent = q.question;
 
   // Show appropriate answer UI
